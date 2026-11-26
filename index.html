@@ -1,6 +1,6 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><script src="ai-config.js"></script><title>المكتبة التراثية</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Aref+Ruqaa:wght@700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Noto+Naskh+Arabic:wght@400;700&family=Scheherazade+New:wght@400;700&family=Cairo:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Amiri:wght@400;700&family=Aref+Ruqaa:wght@700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Noto+Naskh+Arabic:wght@400;700&family=Scheherazade+New:wght@400;700&family=Cairo:wght@400;600&display=swap">
 <style>
 /* Layout: right-hand sidebar + main column (navy hero with search, category pills, text-status card, book list); sidebar becomes a bottom bar on phones. */
 :root{
@@ -390,7 +390,41 @@ function vSearch(){
   ${n<BOOKS.filter(b=>!b.big).length?`<div class="banner">البحث في المتون يشمل الكتب المفتوحة فقط (${AR(n)} من ${AR(BOOKS.filter(b=>!b.big).length)}). <button class="link" data-act="loadall">حمّل كل الكتب للبحث الشامل (نحو ٢٤ ميغابايت)</button></div>`:''}
   ${BOOKS.some(b=>b.big)?`<div class="meta" style="margin-top:8px">الكتب الكبيرة (${esc(BOOKS.filter(b=>b.big).map(b=>b.title).join('، '))}) لا يشملها البحث الشامل ولا الباحث الذكي بعد؛ افتح الكتاب وابحث في فهرسه.</div>`:''}
   <div class="grid" style="margin-top:14px;grid-template-columns:1fr">${q.length<2?`<div class="card empty"><span class="catico light" style="margin:0 auto 12px">${ic('search')}</span><b style="color:var(--fg);font-size:18px">ابحث في المكتبة</b><br>جرّب: «إنما الأعمال بالنيات»، أو «لا ضرر ولا ضرار».</div>`:hits.length?hits.map(h=>`<button class="book hit" data-act="open" data-v="${h.b.id}" data-pi="${h.pi}"><span class="badge">${esc(h.b.title)} · ص${AR(h.b.pages?h.b.pages[h.pi].p:'')}${h.num?` · حديث ${AR(h.num)}`:''}</span><p>${esc(h.x)}</p></button>`).join('')+(S.more?'<div class="meta" style="text-align:center">عُرضت أول ٨٠ نتيجة. ضيّق البحث.</div>':''):'<div class="empty">لا نتائج</div>'}</div></section>`}
-function vQuran(){return `<section class="sec pad">${secHead('quran','المصحف')}<div class="card empty">المصحف يحتاج نصاً موثّقاً من مصدر معتمد ومطابقاً للرسم العثماني، ولذلك لم يُضَف بعد.</div></section>`}
+/* ===== المصحف: نص مصحف المدينة (حفص) بالصفحات، واستماع بالروايات والقراء ===== */
+const MQ={api:'https://mp3quran.net/api/v3/',txt:'https://api.alquran.cloud/v1/page/'};
+S.mq={page:1,sur:1,rw:'',rec:'',pages:{},meta:null,err:'',rcs:null,busy:false,play:''};
+const pad3=n=>String(n).padStart(3,'0');
+async function mqJson(u){const r=await fetch(u);if(!r.ok)throw new Error('http '+r.status);return r.json()}
+async function mqMeta(){const m=S.mq;if(m.meta||m.busy)return;m.busy=true;
+  try{const [su,rw]=await Promise.all([mqJson(MQ.api+'suwar?language=ar'),mqJson(MQ.api+'riwayat?language=ar')]);m.meta={su:su.suwar||[],rw:rw.riwayat||[]};m.err=''}
+  catch(e){m.err='تعذّر تحميل فهرس السور والروايات. تحقق من الإنترنت ثم حدّث الصفحة.'}
+  m.busy=false;render();mqPage(m.page)}
+async function mqPage(n){const m=S.mq;n=Math.min(604,Math.max(1,n|0));m.page=n;if(m.pages[n]){render();return}
+  render();try{const j=await mqJson(MQ.txt+n+'/quran-uthmani');m.pages[n]=j.data.ayahs||[];m.perr=''}catch(e){m.perr='تعذّر تحميل الصفحة. تحقق من الإنترنت.'}render()}
+async function mqRecs(){const m=S.mq;m.rcs=null;m.rec='';if(!m.rw){render();return}
+  try{const j=await mqJson(MQ.api+'reciters?language=ar&rewaya='+encodeURIComponent(m.rw)+'&sura='+m.sur);
+    m.rcs=(j.reciters||[]).flatMap(r=>(r.moshaf||[]).filter(x=>(','+(x.surah_list||'')+',').includes(','+m.sur+',')).map(x=>({n:r.name,mn:x.name,srv:x.server})));m.err=''}
+  catch(e){m.rcs=[];m.err='تعذّر تحميل قائمة القراء.'}render()}
+function vQuran(){const m=S.mq;if(!m.meta&&!m.busy&&!m.err)setTimeout(mqMeta,0);
+  const su=m.meta?m.meta.su:[],ay=m.pages[m.page]||[];let cur=0,html='';
+  for(const a of ay){const sn=a.surah&&a.surah.number;if(sn!==cur){cur=sn;if(a.numberInSurah===1)html+=`<div class="chap" style="text-align:center;font-size:1.25em;margin:14px 0 6px">${esc(a.surah.name)}</div>`}
+    html+=`<span class="mq-a">${esc(a.text)} <span class="hnum">${AR(a.numberInSurah)}</span> </span>`}
+  const rwSel=m.meta?m.meta.rw.map(r=>`<option value="${r.id}" ${String(r.id)===String(m.rw)?'selected':''}>${esc(r.name)}</option>`).join(''):'';
+  const recSel=(m.rcs||[]).map((r,i)=>`<option value="${i}" ${String(i)===String(m.rec)?'selected':''}>${esc(r.n)} — ${esc(r.mn)}</option>`).join('');
+  const rc=m.rcs&&m.rec!==''?m.rcs[+m.rec]:null;
+  return `<section class="sec pad">${secHead('quran','المصحف')}
+  ${m.err?`<div class="banner" role="alert">${esc(m.err)}</div>`:''}
+  <div class="card"><div class="row" style="gap:8px">
+   <select class="field" id="m_sur" style="flex:2" aria-label="السورة">${su.map(x=>`<option value="${x.id}" ${x.id==m.sur?'selected':''}>${AR(x.id)}. ${esc(x.name)}</option>`).join('')||'<option>جارٍ التحميل…</option>'}</select>
+   <input class="field" id="m_pg" type="number" min="1" max="604" value="${m.page}" style="flex:1;min-width:84px" aria-label="رقم الصفحة"></div>
+   <div class="row" style="margin-top:8px;justify-content:space-between"><button class="btn sm" data-mq="next">الصفحة التالية ›</button><span class="meta">صفحة ${AR(m.page)} من ${AR(604)}</span><button class="btn sm" data-mq="prev">‹ الصفحة السابقة</button></div></div>
+  <div class="card"><div class="page-in" style="font-family:'Amiri Quran','Amiri',serif;font-size:${S.size||24}px;line-height:2.3;text-align:justify">${m.perr?`<div class="banner">${esc(m.perr)}</div>`:(html||'<div class="empty">جارٍ تحميل الصفحة…</div>')}</div>
+   <div class="meta" style="margin-top:10px">النص برواية حفص عن عاصم بالرسم العثماني، مقسّم على صفحات مصحف المدينة (٦٠٤ صفحة). مصدر النص: واجهة alquran.cloud، وهو غير مراجع من مجمع الملك فهد، فلا يُعتمد للمراجعة النهائية.</div></div>
+  <div class="card"><h2 style="margin:0 0 8px;font-size:17px">الاستماع بالروايات والقراء</h2>
+   <div class="meta" style="margin-bottom:8px">اختر الرواية ثم القارئ للسورة المحددة أعلاه. الأصوات من mp3quran.net. نص المصحف المعروض حفص فقط، أما الروايات الأخرى فصوتية.</div>
+   <select class="field" id="m_rw" aria-label="الرواية"><option value="">اختر الرواية</option>${rwSel}</select>
+   <select class="field" id="m_rec" style="margin-top:8px" aria-label="القارئ" ${m.rcs&&m.rcs.length?'':'disabled'}><option value="">${m.rw?(m.rcs?(m.rcs.length?'اختر القارئ':'لا يوجد قارئ لهذه السورة بهذه الرواية'):'جارٍ تحميل القراء…'):'اختر الرواية أولًا'}</option>${recSel}</select>
+   ${rc?`<audio controls autoplay preload="none" style="width:100%;margin-top:10px" src="${esc(rc.srv.replace(/\/?$/,'/')+pad3(m.sur)+'.mp3')}"></audio>`:''}</div></section>`}
 
 // ---- الباحث الذكي: بحث لفظي في نصوص المكتبة يستدعيه Claude، ثم يجيب منه مع أرقام مصادر ----
 const STOPN=new Set(['من','في','على','عن','الي','ما','ماذا','هل','كيف','هو','هي','ان','لا','التي','الذي','هذا','هذه','عند','بين','كان','قال','عليه','حديث','احاديث','الحديث','الاحاديث','ورد','وردت']);
@@ -518,7 +552,7 @@ async function askAI(q){
     S.aiStatus='أقرأ النتائج…';paintLast();
     const hist=S.chat.slice(0,-2).filter(x=>x.text).slice(-6).map(x=>({role:x.role,content:x.text}));
     const body=`سؤال الشخص: ${q}\n${m.intent?'المقصود كما فهمناه: '+m.intent+'\n':''}\nالنصوص التي وجدها البحث (قد لا يكون بعضها ذا صلة):\n`+(r.length?r.map(x=>`[${x.n}] ${x.book}، ج${x.volume} ص${x.page}${x.hadith_no?' حديث '+x.hadith_no:''}${x.chapter?' — '+x.chapter:''}: ${x.text}`).join('\n\n'):'(لا نتائج)');
-    const res=await S.ai([{role:'user',content:aiRules()},...hist,{role:'user',content:body}],{cache:false,modelTier:S.deep?'default':'quick',signal:S.aiCtl.signal,onText:({text})=>{m.text=text;S.aiStatus='';paintLast()}});
+    const res=await S.ai([{role:'user',content:aiRules()},...hist,{role:'user',content:body}],{cache:false,modelTier:(S.deep||(S.ai&&S.ai.custom))?'default':'quick',signal:S.aiCtl.signal,onText:({text})=>{m.text=text;S.aiStatus='';paintLast()}});
     m.text=res.text;m.truncated=res.truncated;
   }catch(e){
     m.text=(e&&e.text)||m.text||'';
@@ -719,6 +753,12 @@ document.addEventListener('input',e=>{
   else if(e.target.id==='sz'){S.size=+e.target.value;save();const z=document.getElementById('szv');if(z)z.textContent=AR(S.size);document.querySelectorAll('.preview,.page-in').forEach(n=>n.style.fontSize=S.size+'px')}
   else if(e.target.id==='slider'){setPage(+e.target.value-1,0)}
 });
+document.addEventListener('change',e=>{const t=e.target,m=S.mq;if(!t||!t.id)return;
+  if(t.id==='m_sur'){m.sur=+t.value;const x=(m.meta&&m.meta.su||[]).find(y=>y.id==m.sur);if(x&&x.start_page)mqPage(+x.start_page);if(m.rw)mqRecs()}
+  else if(t.id==='m_pg'){mqPage(+t.value)}
+  else if(t.id==='m_rw'){m.rw=t.value;mqRecs()}
+  else if(t.id==='m_rec'){m.rec=t.value;render()}});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-mq]');if(!b)return;const m=S.mq;if(b.dataset.mq==='next')mqPage(m.page+1);else if(b.dataset.mq==='prev')mqPage(m.page-1)});
 document.addEventListener('submit',e=>{
   e.preventDefault();const f=e.target.dataset.form;
   if(f==='addbook'){S.srv.url?addBookSrv():addBook();return}
