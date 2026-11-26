@@ -1,8 +1,5 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><title>المكتبة التراثية</title>
-<script src="ai-config.js"></script>
-<meta name="description" content="المكتبة التراثية: مكتبة إلكترونية للكتب التراثية مع بحث وقراءة ودراسة.">
-<meta name="theme-color" content="#0b1b31">
-<link rel="icon" href="favicon.svg">
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><script src="ai-config.js"></script><title>المكتبة التراثية</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Aref+Ruqaa:wght@700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Noto+Naskh+Arabic:wght@400;700&family=Scheherazade+New:wght@400;700&family=Cairo:wght@400;600&display=swap">
 <style>
 /* Layout: right-hand sidebar + main column (navy hero with search, category pills, text-status card, book list); sidebar becomes a bottom bar on phones. */
@@ -269,10 +266,9 @@ function rebuild(){
   BOOKS=ALL.filter(b=>vis(b)&&(!b.server||b.state==='ready')&&!(b.server&&b.mode==='scan'&&b.scan_for&&ALL.some(x=>x.id===b.scan_for)))}
 // ---- الاتصال بخادم المكتبة ----
 const srvHeaders=()=>{const h={'Content-Type':'application/json'};if(S.admin&&S.srv.token)h.Authorization='Bearer '+S.srv.token;return h};
+window.addEventListener('error',e=>{try{const d=document.createElement('div');d.style.cssText='position:fixed;top:0;left:0;right:0;background:#fee;color:#900;padding:8px;z-index:9999;font:13px sans-serif;direction:ltr';d.textContent='خطأ: '+(e.message||'')+' '+((e.filename||'').split('/').pop())+':'+(e.lineno||'');document.body.appendChild(d)}catch(x){}});
 /* يجد ملفات الكتب سواء كانت داخل مجلد books أو في المجلد الرئيسي */
-/* اختياري: لنقل ملفات الكتب إلى مضيف مجاني بلا حدّ يومي (مثل Cloudflare Pages) ضع عنوانه في TURATH_BOOKS_BASE داخل ai-config.js */
-const BOOKS_BASE=(window.TURATH_BOOKS_BASE||'').replace(/\/+$/,'');
-(()=>{const of=window.fetch.bind(window);window.fetch=async(u,o)=>{if(BOOKS_BASE&&typeof u==='string'&&/^books\//.test(u))return of(BOOKS_BASE+'/'+u,o);if(typeof u==='string'&&/^books\//.test(u)){try{const r=await of(u,o);if(r.ok)return r}catch(e){if(e&&e.name==='AbortError')throw e}return of(u.slice(6),o)}return of(u,o)}})();
+(()=>{const of=window.fetch.bind(window);window.fetch=async(u,o)=>{if(typeof u==='string'&&/^books\//.test(u)){try{const r=await of(u,o);if(r.ok)return r}catch(e){if(e&&e.name==='AbortError')throw e}return of(u.slice(6),o)}return of(u,o)}})();
 async function getPack(u){
   const dec=async buf=>{const u8=new Uint8Array(buf);if(u8[0]===0x1f&&u8[1]===0x8b){const ds=new DecompressionStream('gzip');const st=new Blob([u8]).stream().pipeThrough(ds);return JSON.parse(await new Response(st).text())}return JSON.parse(new TextDecoder().decode(u8))};
   if(typeof DecompressionStream!=='undefined'){try{const r=await fetch(u+'.gz');if(r.ok){const b=await r.arrayBuffer();return await dec(b)}}catch(e){}}
@@ -337,14 +333,9 @@ function doSearch(){
   }
 }
 const loadedCount=()=>BOOKS.filter(b=>!b.big&&b.pages).length;
-/* البحث الشامل على دفعات: يوفّر الاستهلاك فتبقى الاستضافة المجانية كافية (كل دفعة حتى ~٢٠ ميغابايت، ويُحفظ ما حُمّل في كاش المتصفح) */
-const BATCH_BYTES=20e6;
-const pending=()=>BOOKS.filter(b=>!b.big&&!b.pages&&(!b.custom||b.server||b.src.kind==='text'));
-const nextBatch=()=>{const out=[];let s=0;for(const b of pending().sort((a,c)=>(a.gz||1e6)-(c.gz||1e6))){const g=b.gz||1e6;if(out.length&&s+g>BATCH_BYTES)break;out.push(b);s+=g}return{list:out,mb:Math.max(1,Math.round(s/1e6))}};
 async function loadAll(){
-  const nb=nextBatch();if(!nb.list.length)return;
-  S.busy=`جارٍ تحميل ${AR(nb.list.length)} كتابًا للبحث الشامل...`;render();
-  try{for(let i=0;i<nb.list.length;i+=4)await Promise.all(nb.list.slice(i,i+4).map(b=>loadBook(b.id)))}catch(e){toast('تعذّر تحميل بعض الكتب')}
+  S.busy='جارٍ تحميل الكتب للبحث الشامل...';render();
+  try{await Promise.all(BOOKS.filter(b=>!b.big&&(!b.custom||b.server||b.src.kind==='text')).map(b=>loadBook(b.id)))}catch(e){toast('تعذّر تحميل بعض الكتب')}
   S.busy='';doSearch();render();
 }
 const secHead=(i,t,right='')=>`<div class="sh"><h2><span class="ico">${ic(i)}</span>${t}</h2>${right}</div>`;
@@ -396,8 +387,8 @@ function vSearch(){
   return `<section class="sec pad"><h2 class="calli">البحث</h2><p class="meta" style="margin:4px 0 14px">بحث دقيق ومرن: يتجاهل التشكيل وصور الهمزة (أ إ آ ← ا، ى ← ي) ويقبل الجمل كما الكلمات.</p>
   <input class="field" id="q" value="${esc(S.q)}" placeholder="اكتب كلمة أو جملة..." aria-label="بحث">
   <div class="row" style="margin-top:12px"><button class="pill" aria-pressed="${S.sf==='all'}" data-act="sf" data-v="all">الكل</button><button class="pill" aria-pressed="${S.sf==='m'}" data-act="sf" data-v="m">المتون فقط</button></div>
-  ${n<BOOKS.filter(b=>!b.big).length?`<div class="banner">البحث في المتون يشمل الكتب المفتوحة فقط (${AR(n)} من ${AR(BOOKS.filter(b=>!b.big).length)}). <button class="link" data-act="loadall">حمّل ${AR(nextBatch().list.length)} كتابًا إضافية للبحث (نحو ${AR(nextBatch().mb)} ميغابايت)</button></div>`:''}
-  ${BOOKS.some(b=>b.big)?`<div class="meta" style="margin-top:8px">الكتب الكبيرة (${AR(BOOKS.filter(b=>b.big).length)} كتابًا مثل السير والمسند والتفاسير) لا يشملها البحث الشامل؛ افتح الكتاب وابحث في فهرسه.</div>`:''}
+  ${n<BOOKS.filter(b=>!b.big).length?`<div class="banner">البحث في المتون يشمل الكتب المفتوحة فقط (${AR(n)} من ${AR(BOOKS.filter(b=>!b.big).length)}). <button class="link" data-act="loadall">حمّل كل الكتب للبحث الشامل (نحو ٢٤ ميغابايت)</button></div>`:''}
+  ${BOOKS.some(b=>b.big)?`<div class="meta" style="margin-top:8px">الكتب الكبيرة (${esc(BOOKS.filter(b=>b.big).map(b=>b.title).join('، '))}) لا يشملها البحث الشامل ولا الباحث الذكي بعد؛ افتح الكتاب وابحث في فهرسه.</div>`:''}
   <div class="grid" style="margin-top:14px;grid-template-columns:1fr">${q.length<2?`<div class="card empty"><span class="catico light" style="margin:0 auto 12px">${ic('search')}</span><b style="color:var(--fg);font-size:18px">ابحث في المكتبة</b><br>جرّب: «إنما الأعمال بالنيات»، أو «لا ضرر ولا ضرار».</div>`:hits.length?hits.map(h=>`<button class="book hit" data-act="open" data-v="${h.b.id}" data-pi="${h.pi}"><span class="badge">${esc(h.b.title)} · ص${AR(h.b.pages?h.b.pages[h.pi].p:'')}${h.num?` · حديث ${AR(h.num)}`:''}</span><p>${esc(h.x)}</p></button>`).join('')+(S.more?'<div class="meta" style="text-align:center">عُرضت أول ٨٠ نتيجة. ضيّق البحث.</div>':''):'<div class="empty">لا نتائج</div>'}</div></section>`}
 function vQuran(){return `<section class="sec pad">${secHead('quran','المصحف')}<div class="card empty">المصحف يحتاج نصاً موثّقاً من مصدر معتمد ومطابقاً للرسم العثماني، ولذلك لم يُضَف بعد.</div></section>`}
 
@@ -459,7 +450,7 @@ const AI_ERR=c=>({not_granted:'لم يُسمح للمساعد بالعمل في 
 
 /* ===== الباحث الذكي المستقل: مفتاح يلصقه المستخدم، والطلبات من متصفحه مباشرة ===== */
 const AIP={
-  gemini:{n:'Google Gemini (مفتاح مجاني)',q:'gemini-2.5-flash-lite',d:'gemini-2.5-flash',hint:'مفتاح مجاني من aistudio.google.com/apikey'},
+  gemini:{n:'Google Gemini (مفتاح مجاني)',q:'gemini-3.5-flash-lite',d:'gemini-3.5-flash',hint:'مفتاح مجاني من aistudio.google.com/apikey'},
   anthropic:{n:'Claude (Anthropic API)',q:'claude-haiku-5-5',d:'claude-sonnet-5-5',hint:'مفتاح من console.anthropic.com (مدفوع حسب الاستعمال)'},
   openai:{n:'OpenAI أو خدمة متوافقة',q:'gpt-4o-mini',d:'gpt-4o',hint:'مفتاح OpenAI أو أي خدمة تدعم الصيغة نفسها (غيّر العنوان)',base:'https://api.openai.com/v1'}};
 function loadAICfg(){try{const c=JSON.parse(localStorage.getItem('turath_ai')||'null');return c&&c.key&&AIP[c.prov]?c:null}catch(e){return null}}
@@ -467,7 +458,7 @@ function makeAI(cfg){
   const P=cfg.prov,model=t=>t==='default'?(cfg.md||AIP[P].d):(cfg.mq||AIP[P].q);
   const fail=(code,text)=>{const e=new Error(code);e.code=code;if(text)e.text=text;return e};
   const merge=msgs=>{const out=[];for(const m of msgs){const r=m.role==='assistant'?'assistant':'user';if(out.length&&out[out.length-1].role===r)out[out.length-1].content+='\n\n'+m.content;else out.push({role:r,content:m.content})}if(out.length&&out[0].role!=='user')out.unshift({role:'user',content:'.'});return out};
-  function req(msgs,o,stream){const ms=merge(msgs),m=model(o.modelTier);
+  function req(msgs,o,stream){const ms=merge(msgs),m=o._m||model(o.modelTier);
     if(P==='gemini'){const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:${stream?'streamGenerateContent?alt=sse&':'generateContent?'}key=${encodeURIComponent(cfg.key)}`;
       const body={contents:ms.map(x=>({role:x.role==='assistant'?'model':'user',parts:[{text:x.content}]})),generationConfig:{temperature:.3,...(o.json?{responseMimeType:'application/json'}:{})}};
       return {url,init:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}}}
@@ -476,9 +467,18 @@ function makeAI(cfg){
     return {url:base+'/chat/completions',init:{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},body:JSON.stringify({model:m,stream:!!stream,messages:ms,...(o.json?{response_format:{type:'json_object'}}:{})})}}}
   const piece=j=>P==='gemini'?((j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts||[]).map(p=>p.text||'').join('')):P==='anthropic'?(j.type==='content_block_delta'&&j.delta&&j.delta.text||''):(j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content||'');
   const full=j=>P==='gemini'?piece(j):P==='anthropic'?((j.content||[]).map(c=>c.text||'').join('')):(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||'');
-  async function call(msgs,o,stream){
+  const RES={};
+  async function resolveGem(tier){const k=tier==='default'?'d':'q';if(RES[k])return RES[k];
+    try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key='+encodeURIComponent(cfg.key));if(!r.ok)return null;const j=await r.json();
+      const ok=(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>m.name.replace(/^models\//,'')).filter(n=>/^gemini-[\d.]+-flash/.test(n)&&!/(image|tts|live|audio|thinking|preview|exp|latest|robotics|computer)/.test(n));
+      const ver=n=>parseFloat((n.match(/^gemini-([\d.]+)/)||[0,0])[1]);
+      const want=k==='q'?ok.filter(n=>/lite/.test(n)):ok.filter(n=>!/lite/.test(n));const pool=want.length?want:ok;
+      pool.sort((a,b)=>ver(b)-ver(a)||a.length-b.length);return RES[k]=pool[0]||null}catch(e){return null}}
+  async function call(msgs,o,stream,retried){
+    if(P==='gemini'&&RES[o.modelTier==='default'?'d':'q']&&!cfg['m'+(o.modelTier==='default'?'d':'q')])o={...o,_m:RES[o.modelTier==='default'?'d':'q']};
     const {url,init}=req(msgs,o,stream);let r;
     try{r=await fetch(url,{...init,signal:o.signal})}catch(e){if(e&&e.name==='AbortError')throw fail('cancelled');const er=fail('network');er.detail='لم يصل الطلب: '+(e&&e.message||'');throw er}
+    if(!r.ok&&r.status===404&&P==='gemini'&&!retried){const k=o.modelTier==='default'?'d':'q';delete RES[k];const m2=await resolveGem(o.modelTier);if(m2)return call(msgs,{...o,_m:m2},stream,true)}
     if(!r.ok){let t='';try{const j=await r.json();t=(j.error&&(j.error.message||j.error.status))||''}catch(e){}const d=r.status+(t?' '+String(t).slice(0,160):'');let er;if(r.status===429)er=fail('rate_limited');else if([400,401,403].includes(r.status))er=fail('bad_key');else er=fail('network');er.detail=d;throw er}
     return r}
   const f=async(msgs,o={})=>{
