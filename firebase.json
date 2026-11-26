@@ -1,7 +1,7 @@
 {
   "hosting": {
     "public": ".",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "*.zip"],
+    "ignore": ["firebase.json", "firebase-debug.log", "README.md", "*.md", "**/.*", "**/node_modules/**", "*.zip"],
     "cleanUrls": true,
     "headers": [
       { "source": "/books/**/*.gz", "headers": [
