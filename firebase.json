@@ -1,0 +1,19 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "*.zip"],
+    "cleanUrls": true,
+    "headers": [
+      { "source": "/books/**/*.gz", "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=2592000" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" } ] },
+      { "source": "/books/*.json", "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=3600" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" } ] },
+      { "source": "/index.html", "headers": [ { "key": "Cache-Control", "value": "no-cache" } ] },
+      { "source": "**", "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" } ] }
+    ]
+  }
+}
