@@ -1,5 +1,3 @@
-// اتركه فارغًا: يلصق كل مستخدم مفتاحه الخاص من «الإعدادات ← الباحث الذكي» ويُحفظ في متصفحه فقط.
-// لا تضع مفتاحًا حقيقيًا هنا أبدًا لأن أي زائر يستطيع قراءته.
-AQ.Ab8RN6KZSdbpQTzcARf1RQc-3U5mwAlA8eM7lrMqwGTbFU4wFw
-// اختياري: عنوان مضيف مجاني آخر لملفات مجلد books (بدون / في النهاية). اتركه فارغًا لاستعمال Firebase نفسه.
-window.TURATH_BOOKS_BASE="";
+// مفتاح الباحث الذكي (Groq المجاني). يشتغل لكل الزوار.
+window.TURATH_PROV="groq";
+window.TURATH_KEY="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";
