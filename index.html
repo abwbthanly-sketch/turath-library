@@ -22,6 +22,8 @@
   --accent:#e2c27a; --accent-fg:#1a1405; --pat:rgba(226,194,122,.05);
   --hl-yellow:#6b5f1c; --hl-green:#2e5a38; --hl-blue:#27506f; --hl-pink:#6e3347; color-scheme:dark}
 html,body{height:100%}
+@supports (height:100dvh){html,body{height:100dvh}}
+body{overflow:hidden}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--font-ui);direction:rtl}
 button,input,textarea{font:inherit;color:inherit}
@@ -39,7 +41,7 @@ aside{width:236px;flex:none;background:var(--surface);border-left:1px solid var(
 .navbtn[aria-current="page"] svg{color:var(--accent)}
 .waqf{margin-top:auto;border:1px solid var(--line);border-radius:12px;padding:12px;background:color-mix(in srgb,var(--gold) 8%,var(--surface));font-size:12.5px;line-height:1.8;color:var(--muted)}
 .waqf b{color:var(--accent);display:block;margin-bottom:2px;font-size:13px}
-.col{flex:1;min-width:0;display:flex;flex-direction:column}
+.col{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
 .main{flex:1;min-height:0;overflow-y:auto;background-image:repeating-linear-gradient(45deg,var(--pat) 0 1px,transparent 1px 30px),repeating-linear-gradient(-45deg,var(--pat) 0 1px,transparent 1px 30px)}
 .main.reading{display:flex;flex-direction:column;overflow:hidden}
 .topbar{display:flex;justify-content:space-between;align-items:center;padding-block:10px}
@@ -249,7 +251,7 @@ const COLORS=['yellow','green','blue','pink'];
 let S={deep:false,chat:[],aiBusy:false,aiErr:'',aiStatus:'',aiCtl:null,ai:null,aiTools:false,cn:0,cites:{},srv:{url:'',token:''},srvOk:false,srvErr:'',admin:false,rev:'',scan:null,delc:null,draft:{},hist:[],rt:'white',rf:'amiri',st:'all',sf:'all',fq:'',aq:'',bcard:null,secs:0,day:'',tab:'lib',cat:null,tabs:[],active:null,q:'',hits:[],more:false,size:24,lh:2,serif:true,theme:'auto',marks:{},sel:null,sheet:null,tq:'',card:null,toast:'',ready:false,busy:'',err:''};
 try{const r=localStorage.getItem('turath_demo2');if(r){const o=JSON.parse(r);Object.assign(S,{size:o.size||24,lh:o.lh||2,serif:o.serif!==false,theme:o.theme||'auto',marks:o.marks||{},rt:RT[o.rt]?o.rt:'white',rf:FONTS[o.rf]?o.rf:'amiri'});const td=new Date().toDateString();S.day=td;S.secs=o.day===td?(o.secs||0):0}}catch(e){}
 if(!S.day)S.day=new Date().toDateString();
-try{const o=JSON.parse(localStorage.getItem('turath_admin')||'{}');S.admin=!!o.a;S.rev=o.r||'';S.hidden=Array.isArray(o.h)?o.h:[];if(o.s&&typeof o.s.url==='string')S.srv={url:o.s.url,token:o.s.token||''}}catch(e){}
+try{const o=JSON.parse(localStorage.getItem('turath_admin')||'{}');S.admin=false;S.rev=o.r||'';S.hidden=Array.isArray(o.h)?o.h:[];if(o.s&&typeof o.s.url==='string')S.srv={url:o.s.url,token:o.s.token||''}}catch(e){}
 const saveAdmin=()=>{try{localStorage.setItem('turath_admin',JSON.stringify({a:S.admin,r:S.rev,s:S.srv,h:S.hidden||[]}))}catch(e){}};
 const STAT=[['draft','مسودة'],['preview','معاينة'],['reviewed','مراجَع'],['published','منشور']];
 const KIND_L={archive:'صورة الطبعة (أرشيف الإنترنت)',pdf:'ملف PDF (صور)',text:'نص (ملف بيانات)'};
@@ -486,6 +488,9 @@ const AI_ERR=c=>({not_granted:'لم يُسمح للمساعد بالعمل في 
 const AIP={
   gemini:{n:'Google Gemini (مفتاح مجاني)',q:'gemini-3.5-flash-lite',d:'gemini-3.5-flash',hint:'مفتاح مجاني من aistudio.google.com/apikey'},
   anthropic:{n:'Claude (Anthropic API)',q:'claude-haiku-5-5',d:'claude-sonnet-5-5',hint:'مفتاح من console.anthropic.com (مدفوع حسب الاستعمال)'},
+  groq:{n:'Groq (مجاني، نماذج Llama وQwen)',q:'llama-3.1-8b-instant',d:'llama-3.3-70b-versatile',hint:'مفتاح مجاني من console.groq.com/keys',base:'https://api.groq.com/openai/v1',pref:[/qwen.*32b/,/llama-3\.3-70b/,/gpt-oss-120b/,/llama.*70b/]},
+  openrouter:{n:'OpenRouter (نماذج مجانية متعددة)',q:'deepseek/deepseek-chat-v3.1:free',d:'deepseek/deepseek-chat-v3.1:free',hint:'مفتاح مجاني من openrouter.ai/keys، وتُختار النماذج المجانية تلقائيًا',base:'https://openrouter.ai/api/v1',pref:[/deepseek.*(v3|chat).*:free/,/qwen.*(72b|235b|32b).*:free/,/llama-3\.3-70b.*:free/,/:free$/]},
+  deepseek:{n:'DeepSeek (رخيص، ليس مجانيًا)',q:'deepseek-chat',d:'deepseek-chat',hint:'مفتاح من platform.deepseek.com، ويحتاج رصيدًا صغيرًا',base:'https://api.deepseek.com/v1',pref:[/deepseek-chat/]},
   openai:{n:'OpenAI أو خدمة متوافقة',q:'gpt-4o-mini',d:'gpt-4o',hint:'مفتاح OpenAI أو أي خدمة تدعم الصيغة نفسها (غيّر العنوان)',base:'https://api.openai.com/v1'}};
 function loadAICfg(){try{const c=JSON.parse(localStorage.getItem('turath_ai')||'null');return c&&c.key&&AIP[c.prov]?c:null}catch(e){return null}}
 function makeAI(cfg){
@@ -497,32 +502,36 @@ function makeAI(cfg){
       const body={contents:ms.map(x=>({role:x.role==='assistant'?'model':'user',parts:[{text:x.content}]})),generationConfig:{temperature:.3,...(o.json?{responseMimeType:'application/json'}:{})}};
       return {url,init:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}}}
     if(P==='anthropic'){return {url:'https://api.anthropic.com/v1/messages',init:{method:'POST',headers:{'Content-Type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:m,max_tokens:o.json?400:2000,stream:!!stream,messages:ms})}}}
-    const base=(cfg.base||AIP.openai.base).replace(/\/+$/,'');
+    const base=(cfg.base||AIP[P].base||AIP.openai.base).replace(/\/+$/,'');
     return {url:base+'/chat/completions',init:{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},body:JSON.stringify({model:m,stream:!!stream,messages:ms,...(o.json?{response_format:{type:'json_object'}}:{})})}}}
   const piece=j=>P==='gemini'?((j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts||[]).map(p=>p.text||'').join('')):P==='anthropic'?(j.type==='content_block_delta'&&j.delta&&j.delta.text||''):(j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content||'');
   const full=j=>P==='gemini'?piece(j):P==='anthropic'?((j.content||[]).map(c=>c.text||'').join('')):(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||'');
-  const RES={};
+  const RES={};const cleanT=t=>t.replace(/<think>[\s\S]*?(<\/think>|$)/g,'').replace(/^\s+/,'');
   async function resolveGem(tier){const k=tier==='default'?'d':'q';if(RES[k])return RES[k];
     try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key='+encodeURIComponent(cfg.key));if(!r.ok)return null;const j=await r.json();
       const ok=(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>m.name.replace(/^models\//,'')).filter(n=>/^gemini-[\d.]+-flash/.test(n)&&!/(image|tts|live|audio|thinking|preview|exp|latest|robotics|computer)/.test(n));
       const ver=n=>parseFloat((n.match(/^gemini-([\d.]+)/)||[0,0])[1]);
       const want=k==='q'?ok.filter(n=>/lite/.test(n)):ok.filter(n=>!/lite/.test(n));const pool=want.length?want:ok;
       pool.sort((a,b)=>ver(b)-ver(a)||a.length-b.length);return RES[k]=pool[0]||null}catch(e){return null}}
+  async function resolveOA(tier){const base=(cfg.base||AIP[P].base||AIP.openai.base).replace(/\/+$/,'');
+    try{const r=await fetch(base+'/models',{headers:{Authorization:'Bearer '+cfg.key}});if(!r.ok)return null;const j=await r.json();const ids=(j.data||j.models||[]).map(m=>m.id||m.name).filter(Boolean);
+      for(const re of (AIP[P].pref||[])){const m=ids.find(x=>re.test(x));if(m)return m}return null}catch(e){return null}}
   async function call(msgs,o,stream,retried){
     if(P==='gemini'&&RES[o.modelTier==='default'?'d':'q']&&!cfg['m'+(o.modelTier==='default'?'d':'q')])o={...o,_m:RES[o.modelTier==='default'?'d':'q']};
     const {url,init}=req(msgs,o,stream);let r;
     try{r=await fetch(url,{...init,signal:o.signal})}catch(e){if(e&&e.name==='AbortError')throw fail('cancelled');const er=fail('network');er.detail='لم يصل الطلب: '+(e&&e.message||'');throw er}
     if(!r.ok&&r.status===404&&P==='gemini'&&!retried){const k=o.modelTier==='default'?'d':'q';delete RES[k];const m2=await resolveGem(o.modelTier);if(m2)return call(msgs,{...o,_m:m2},stream,true)}
+    if(!r.ok&&[400,404].includes(r.status)&&P!=='gemini'&&P!=='anthropic'&&!retried&&AIP[P].pref){const m2=await resolveOA(o.modelTier);if(m2&&m2!==(o._m||model(o.modelTier)))return call(msgs,{...o,_m:m2},stream,true)}
     if(!r.ok){let t='';try{const j=await r.json();t=(j.error&&(j.error.message||j.error.status))||''}catch(e){}const d=r.status+(t?' '+String(t).slice(0,160):'');let er;if(r.status===429)er=fail('rate_limited');else if([400,401,403].includes(r.status))er=fail('bad_key');else er=fail('network');er.detail=d;throw er}
     return r}
   const f=async(msgs,o={})=>{
     const r=await call(msgs,o,true);const rd=r.body.getReader(),dec=new TextDecoder();let buf='',text='',trunc=false;
     try{for(;;){const {done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});
       let i;while((i=buf.indexOf('\n'))>=0){const line=buf.slice(0,i).trim();buf=buf.slice(i+1);if(!line.startsWith('data:'))continue;const d=line.slice(5).trim();if(!d||d==='[DONE]')continue;
-        let j;try{j=JSON.parse(d)}catch(e){continue}const t=piece(j);if(t){text+=t;o.onText&&o.onText({text,delta:t})}}}}
+        let j;try{j=JSON.parse(d)}catch(e){continue}const t=piece(j);if(t){text+=t;const ct=cleanT(text);o.onText&&o.onText({text:ct,delta:t})}}}}
     catch(e){if(e&&e.name==='AbortError')throw fail('cancelled',text);throw e}
-    return {text,truncated:trunc}};
-  f.json=async(msgs,o={})=>{const r=await call(msgs,{...o,json:true},false);const j=await r.json();const t=full(j),m=t.match(/\{[\s\S]*\}/);if(!m)throw fail('invalid_json');try{return JSON.parse(m[0])}catch(e){throw fail('invalid_json')}};
+    return {text:cleanT(text),truncated:trunc}};
+  f.json=async(msgs,o={})=>{const r=await call(msgs,{...o,json:true},false);const j=await r.json();const t=cleanT(full(j)),m=t.match(/\{[\s\S]*\}/);if(!m)throw fail('invalid_json');try{return JSON.parse(m[0])}catch(e){throw fail('invalid_json')}};
   f.limits=async()=>({});f.custom=true;return f}
 const aiCfgCard=()=>{const c=loadAICfg()||{prov:'gemini'},p=AIP[c.prov];return `<div class="card" style="margin:0 0 12px"><h3 style="margin:0 0 6px">ربط الباحث الذكي بمفتاحك</h3>
   <div class="meta" style="margin-bottom:8px">الباحث يحتاج مفتاحًا من خدمة ذكاء اصطناعي. يُحفظ المفتاح في متصفحك أنت فقط، ولا يُرسل لأي جهة غير الخدمة التي تختارها. لا تشارك الصفحة وفي متصفحك مفتاحك، فكل شخص يستعمل مفتاحه.</div>
@@ -592,7 +601,6 @@ function vBrowse(){return `<section class="sec pad"><div class="statrow">
 function vSettings(){return `<section class="sec pad"><h2 class="calli">الإعدادات</h2>
   <div class="card" style="margin-top:14px"><h2><span class="catico light" style="width:34px;height:34px">${ic('settings')}</span>إعدادات القراءة الافتراضية</h2>${settingsBody()}</div>
   <div class="card"><button class="btn" style="width:100%;text-align:right;margin-bottom:8px" data-act="tab" data-v="tree">الفهرس الشجري</button><button class="btn" style="width:100%;text-align:right" data-act="tab" data-v="search">البحث في المكتبة</button></div>
-  <div class="card"><h2>وضع مدير المكتبة (تجريبي)</h2><p class="fnote">يتيح إضافة كتب برابط مباشر ومعاينتها واعتمادها. هذا المفتاح للتجربة فقط وليس حماية: أي شخص يفتح الصفحة يستطيع تشغيله.</p><button class="btn ${S.admin?'primary':''}" data-act="adm">${S.admin?'إيقاف وضع المدير':'تشغيل وضع المدير'}</button></div>
   <div class="card"><h2>عن المكتبة</h2><div class="logobox">${brandMark()}<div style="color:#1d2a3a;margin-top:6px;font-size:14px">${esc(ORG.name)}</div></div>
    <p class="fnote">${esc(ORG.name)} — ${esc(ORG.sub)}: فهرس رقمي لأمهات كتب التراث الإسلامي، مع قارئ بخطوط عربية وسمات قراءة، وأدوات دراسة: تظليل بالألوان وملاحظات وعلامات مرجعية ونسخ مع العزو.</p>
    <div class="banner">${SRC_NOTE}<br>المصدر: <a href="https://github.com/OpenITI/RELEASE" target="_blank" rel="noopener">OpenITI</a>.</div></div></section>`}
@@ -862,7 +870,7 @@ document.addEventListener('keydown',e=>{
 function cur0(){const t=S.tabs.find(x=>x.id===S.active);return{t,b:book(t.id)}}
 setInterval(()=>{const t=S.tabs.find(x=>x.id===S.active);if(t&&!t.cover&&!document.hidden){const td=new Date().toDateString();if(S.day!==td){S.day=td;S.secs=0}S.secs+=5;save()}},5000);
 document.addEventListener('change',e=>{const t=e.target;if(t&&t.id==='ai_prov'){const p=AIP[t.value],h=document.getElementById('ai_hint');if(h)h.textContent=p.hint;const q=document.getElementById('ai_mq'),d=document.getElementById('ai_md');if(q)q.placeholder='النموذج السريع (الافتراضي: '+p.q+')';if(d)d.placeholder='نموذج البحث العميق (الافتراضي: '+p.d+')'}});
-(async()=>{const cfg=loadAICfg()||(window.TURATH_KEY?{prov:'gemini',key:window.TURATH_KEY,shared:true}:null);if(cfg){S.ai=makeAI(cfg);render();return}try{if(window.claude){const f=await claude.use('sample');if(f){S.ai=f;try{const l=await f.limits();S.aiTools=!!(l&&l.tools)}catch(e){S.aiTools=false}render()}}}catch(e){S.ai=null}})();
+(async()=>{const cfg=loadAICfg()||(window.TURATH_KEY?{prov:(AIP[window.TURATH_PROV]?window.TURATH_PROV:'gemini'),key:window.TURATH_KEY,shared:true}:null);if(cfg){S.ai=makeAI(cfg);render();return}try{if(window.claude){const f=await claude.use('sample');if(f){S.ai=f;try{const l=await f.limits();S.aiTools=!!(l&&l.tools)}catch(e){S.aiTools=false}render()}}}catch(e){S.ai=null}})();
 applyTheme();render();loadCatalog().then(pollSrv);
 </script>
 
