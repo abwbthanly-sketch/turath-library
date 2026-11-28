@@ -228,7 +228,7 @@ const brandMark=()=>ORG.logo?`<img src="${ORG.logo.replace(/"/g,'')}" alt="" wid
 const CATX={quran:{i:'quran',d:'تفسير وقراءات وعلوم القرآن'},hadith:{i:'scroll',d:'صحاح وسنن وشروح ومصطلح'},aqeeda:{i:'compass',d:'متون الاعتقاد وشروحها'},fiqh:{i:'scales',d:'فقه مقارن وأصول الفقه'},lang:{i:'lang',d:'معاجم ونحو وصرف'},seera:{i:'bank',d:'تاريخ وتراجم وأعلام'},raqaiq:{i:'heart',d:'تزكية وأعمال القلوب'}};
 const RT={white:['أبيض','#ffffff','#1d2a3a',0],raq:['رق','#f6f0dc','#2b2416',0],sepia:['سيبيا','#efdfbf','#4a3721',0],navy:['كحلي','#0f1e36','#e8e2d0',1],night:['ليل','#0f1114','#d8d4c8',1],indigo:['نيلي','#1b2250','#e6e3f2',1]};
 const FONTS={amiri:['أميري',"'Amiri','Traditional Arabic',serif"],naskh:['نسخ',"'Noto Naskh Arabic','Traditional Arabic',serif"],shahrazad:['شهرزاد',"'Scheherazade New','Traditional Arabic',serif"],cairo:['القاهرة',"'Cairo',sans-serif"]};
-const MOB=['lib','tree','search','study','settings'];
+const MOB=['lib','search','assistant','quran','study','settings'];
 const CATS=[{id:'quran',n:'القرآن والتفسير'},{id:'hadith',n:'الحديث'},{id:'aqeeda',n:'العقيدة'},{id:'fiqh',n:'الفقه وأصوله'},{id:'lang',n:'اللغة والأدب'},{id:'seera',n:'السيرة والتاريخ'},{id:'raqaiq',n:'الرقائق والزهد'}];
 const SRC_NOTE='النصوص من مدوّنة OpenITI، بترخيص CC BY-NC-SA 4.0 (نسبة، غير تجاري، مشاركة بالمثل). لم تُراجع مراجعة بشرية بعد، وأغلبها بلا تشكيل.';
 
@@ -401,7 +401,7 @@ async function mqMeta(){const m=S.mq;if(m.meta||m.busy)return;m.busy=true;
   try{const [su,rw]=await Promise.all([mqJson(MQ.api+'suwar?language=ar'),mqJson(MQ.api+'riwayat?language=ar')]);m.meta={su:su.suwar||[],rw:rw.riwayat||[]};m.err=''}
   catch(e){m.err='تعذّر تحميل فهرس السور والروايات. تحقق من الإنترنت ثم حدّث الصفحة.'}
   m.busy=false;render();mqPage(m.page)}
-async function mqPage(n){const m=S.mq;n=Math.min(604,Math.max(1,n|0));m.page=n;if(m.pages[n]){render();return}
+async function mqPage(n){const m=S.mq;n=Math.min(604,Math.max(1,n|0));if(n!==m.page)S._top=true;m.page=n;if(m.pages[n]){render();return}
   render();try{const j=await mqJson(MQ.txt+n+'/quran-uthmani');m.pages[n]=j.data.ayahs||[];m.perr=''}catch(e){m.perr='تعذّر تحميل الصفحة. تحقق من الإنترنت.'}render()}
 async function mqRecs(){const m=S.mq;m.rcs=null;m.rec='';if(!m.rw){render();return}
   try{const j=await mqJson(MQ.api+'reciters?language=ar&rewaya='+encodeURIComponent(m.rw)+'&sura='+m.sur);
@@ -470,7 +470,12 @@ const expandPrompt=(q,prev)=>`الناس يسألون بالعامية أو بك
 أعد JSON فقط بهذا الشكل: {"intent":"المقصود في جملة قصيرة","queries":["...","..."]}
 - من ٣ إلى ٦ استعلامات، كل منها ٢ إلى ٤ كلمات مفتاحية، بلا ألفاظ عامة مثل (حديث، ما، هل، وش).
 - نوّع بينها: ألفاظ الحديث المتوقعة، ومرادفات، واسم الباب أو الكتاب الفقهي المناسب (مثل «المسح على الخفين»، «كتاب الطهارة»).
-- لا تُضمّن شرحًا ولا حكمًا.${prev?`\nآخر سؤال سابق في الحوار (للسياق): ${prev}`:''}
+- لا تُضمّن شرحًا ولا حكمًا.
+أمثلة على تحويل العامية:
+«كم مرة أغسل وجهي في الوضوء» ← {"intent":"عدد مرات غسل الوجه في الوضوء","queries":["غسل الوجه في الوضوء","توضأ ثلاثا ثلاثا","توضأ مرتين مرتين","توضأ مرة مرة"]}
+«ينفع أصلي وأنا ما توضيت» ← {"intent":"حكم الصلاة بغير وضوء","queries":["لا تقبل صلاة بغير طهور","لا يقبل الله صلاة أحدكم إذا أحدث","الوضوء شرط الصلاة"]}
+«وش حكم الأكل وأنا واقف» ← {"intent":"الأكل قائمًا","queries":["النهي عن الشرب قائما","الأكل قائما","زجر عن الشرب قائما"]}
+«أفطر وأنا ناسي» ← {"intent":"من أكل ناسيًا وهو صائم","queries":["من نسي وهو صائم فأكل أو شرب","فليتم صومه","الأكل ناسيا في الصيام"]}${prev?`\nآخر سؤال سابق في الحوار (للسياق): ${prev}`:''}
 السؤال: ${q}`;
 const mindMap=m=>{
   const used=[...new Set([...(m.text||'').matchAll(/\[([0-9٠-٩]+)\]/g)].map(x=>+String(x[1]).replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c))))].filter(n=>S.cm&&S.cm[n]);
@@ -532,7 +537,7 @@ function makeAI(cfg){
     catch(e){if(e&&e.name==='AbortError')throw fail('cancelled',text);throw e}
     return {text:cleanT(text),truncated:trunc}};
   f.json=async(msgs,o={})=>{const r=await call(msgs,{...o,json:true},false);const j=await r.json();const t=cleanT(full(j)),m=t.match(/\{[\s\S]*\}/);if(!m)throw fail('invalid_json');try{return JSON.parse(m[0])}catch(e){throw fail('invalid_json')}};
-  f.limits=async()=>({});f.custom=true;return f}
+  f.limits=async()=>({});f.custom=true;f.shared=!!cfg.shared;return f}
 const aiCfgCard=()=>{const c=loadAICfg()||{prov:'gemini'},p=AIP[c.prov];return `<div class="card" style="margin:0 0 12px"><h3 style="margin:0 0 6px">ربط الباحث الذكي بمفتاحك</h3>
   <div class="meta" style="margin-bottom:8px">الباحث يحتاج مفتاحًا من خدمة ذكاء اصطناعي. يُحفظ المفتاح في متصفحك أنت فقط، ولا يُرسل لأي جهة غير الخدمة التي تختارها. لا تشارك الصفحة وفي متصفحك مفتاحك، فكل شخص يستعمل مفتاحه.</div>
   <label class="meta">الخدمة</label><select class="field" id="ai_prov" data-change="aiprov">${Object.entries(AIP).map(([k,v])=>`<option value="${k}" ${k===c.prov?'selected':''}>${v.n}</option>`).join('')}</select>
@@ -553,7 +558,7 @@ async function askAI(q){
     let sh=null;
     const loading=Promise.resolve();
     let queries=[q];
-    try{const r=await (S.ai.json?S.ai.json(expandPrompt(q,prevQ),{modelTier:'quick',signal:S.aiCtl.signal}):Promise.reject({code:'invalid_json'}));
+    try{const r=await (S.ai.json?S.ai.json(expandPrompt(q,prevQ),{modelTier:(S.ai.custom?'default':'quick'),signal:S.aiCtl.signal}):Promise.reject({code:'invalid_json'}));
       const qs=((r&&r.queries)||[]).filter(x=>typeof x==='string'&&x.trim()).slice(0,6);if(qs.length){queries=[...qs,q];m.qs=qs}if(r&&typeof r.intent==='string')m.intent=r.intent.slice(0,200)}
     catch(e){if(e&&fatal(e.code))throw e}
     S.aiStatus='أبحث في الكتب…';paintLast();await loading;
@@ -574,7 +579,7 @@ function vAssistant(){
   return `<section class="sec pad"><h2 class="calli">الباحث الذكي</h2>
   <p class="meta" style="margin:4px 0 12px">اسأله بكلامك العادي، حتى بالعامية: يفهم مقصودك، ويبحث في نصوص المكتبة ويجيب منها، وكل معلومة برقم مصدر تضغط عليه فتفتح الصفحة. النصوص غير مراجَعة بشريًا، فتحقّق من المصدر قبل الاعتماد.</p>
   ${!S.ai?`<div class="card empty">الباحث الذكي يحتاج مفتاحًا. اربطه من البطاقة التالية، أو جرّب <button class="link" data-act="tab" data-v="search">البحث العادي</button>.</div>${aiCfgCard()}`:`
-  ${S.ai.custom?`<details class="card" style="margin:0 0 10px"><summary class="meta" style="cursor:pointer">إعدادات الباحث (مفتاحك)</summary>${aiCfgCard()}</details>`:''}
+  ${S.ai.custom&&!S.ai.shared?`<details class="card" style="margin:0 0 10px"><summary class="meta" style="cursor:pointer">إعدادات الباحث (مفتاحك)</summary>${aiCfgCard()}</details>`:''}
   <details class="card" style="margin:0 0 10px"><summary style="cursor:pointer"><b>الكتب التي يبحث فيها</b> <span class="meta">(${AR(aiSel().length)} من ${AR(aiPool().length)})</span></summary><div class="meta" style="margin:8px 0">الكتب الكبيرة (السير، المسند، التفسير) تُحمَّل عند أول سؤال وتحتاج بعض الوقت.</div>${aiPool().map(b=>`<label style="display:flex;gap:8px;align-items:center;padding:4px 0"><input type="checkbox" data-act="aibook" data-v="${b.id}" ${aiSel().includes(b)?'checked':''}> ${esc(b.title)}${b.big?' <span class="badge">كبير</span>':''}</label>`).join('')}</details>
   ${S.chat.map((m,i)=>`<div class="msg ${m.role==='user'?'u':'a'}" ${i===S.chat.length-1?'id="aiLast"':''}>${m.role==='user'?esc(m.text):fmtAns(m)}</div>`).join('')}
   ${S.chat.length?'':`<div class="pills" style="flex-wrap:wrap">${sugg.map(x=>`<button class="pill" data-act="aisuggest" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div>`}
@@ -727,6 +732,7 @@ const sheetCard=()=>{const c=S.card;return `<div class="sheet-wrap" data-act="cl
 
 const KEEP=['ai_q','q','tq','hn','fq','ask','ab_url','ab_title','ab_author','ab_ed','rev','sv_url','sv_tok'];
 function render(){
+  const _m=document.querySelector('.main'),_top=_m?_m.scrollTop:0,_key=S.tab+'|'+S.active;
   const a=document.activeElement,keep=a&&KEEP.includes(a.id)?{id:a.id,s:a.selectionStart}:null;
   const reading=!!S.active&&!S.busy;
   const views={lib:vLib,tree:vTree,full:vFull,search:vSearch,quran:vQuran,assistant:vAssistant,study:vStudy,browse:vBrowse,admin:vAdmin,settings:vSettings};
@@ -745,6 +751,7 @@ function render(){
   </div>
   ${S.sel?sheetSel():''}${S.sheet==='settings'?sheetSettings():''}${S.sheet==='toc'&&S.active?sheetToc():''}${S.sheet==='links'&&S.active?sheetLinks():''}${S.card?sheetCard():''}${S.bcard?sheetBCard():''}${S.scan?sheetScan():''}${S.toast?`<div class="toast" role="status">${esc(S.toast)}</div>`:''}`;
   if(keep){const el=document.getElementById(keep.id);if(el){el.focus();el.setSelectionRange(keep.s,keep.s)}}
+  const _n=document.querySelector('.main');if(_n&&!S._top&&_key===S._rk&&_top)_n.scrollTop=_top;if(S._top&&_n)_n.scrollTop=0;S._top=false;S._rk=_key;
 }
 function mark(id,patch){const t=S.tabs.find(x=>x.id===S.active),pg=book(t.id).pages[t.pi],p=pg.ps.find(x=>x.id===id);
   const m=Object.assign({id,b:t.id,pg:pg.p,pt:pg.part||1,v:pg.v,t:p.x.slice(0,300)},S.marks[id],patch);
